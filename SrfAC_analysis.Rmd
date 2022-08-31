@@ -5,7 +5,7 @@ date: '2022-05-16'
 output: html_document
 ---
 
-Copyright by Dr. Carl-Magnus Svensson
+Copyright 2022 by Dr. Carl-Magnus Svensson
 
 Research Group Applied Systems Biology - Head: Prof. Dr. Marc Thilo
 Figge
@@ -14,6 +14,9 @@ HKI-Center for Systems Biology of Infection
 Leibniz Institute for Natural Product Research and Infection Biology -
 Hans Knöll Insitute (HKI)
 Adolf-Reichwein-Straße 23, 07745 Jena, Germany
+
+Code is available for redistribution under the BSD3 license 
+(https://opensource.org/licenses/BSD-3-Clause).
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, dev = 'svg')
@@ -39,7 +42,6 @@ for a number of different residue.
 
 ```{r Load data, echo=FALSE}
 activity = read.csv('./Data/Library.csv', sep=',')
-#substrates = colnames(activity)[1:19]
 substrates = c( "AlaHA","CysHA", "IleHA","LeuHA","DPheHA", "LPheHA", "DValHA", "LValHA","MetHA", "ThrHA","TrpHA", "TyrHA")
 residues_of_interest = c("G", "A", "S", "T", "V", "C", "L", "I", "M", "F", "Y", "W", "R", "E", "D", "Q", "K", "P", "N", "H")
 activity_cleaned <- activity[,substrates]
@@ -49,6 +51,7 @@ activity_cleaned["Position"] = activity$Position
 activity_cleaned["WT"] = activity$WT
 
 activity_cleaned <- activity_cleaned[activity_cleaned$Residue %in% residues_of_interest, ]
+# Read the BLOSUM matrix
 file <- "ftp://ftp.ncbi.nih.gov/blast/matrices/BLOSUM62"
 b62 <- as.matrix(read.table(file, check.names=FALSE))
 
@@ -84,9 +87,9 @@ calculation. I then foucs on the highest JSD between WT and a mutation as a
 measure for the profile change when mutating a certain position. The
 threshold of 1% was chosen by me after discussion with Hajo and can be changed 
 if a different value makes more sense.
+
 ```{r Kullback–Leibler divergence}
   KL_div <- function(h1, h2) {
-
     kld = sum(h1*(log2(h1/h2)), na.rm=TRUE)
     return(kld)
   }
@@ -106,6 +109,7 @@ if a different value makes more sense.
 ## Loop over the binding positions and determine the activity changes for each residue
 
 ```{r normalize activity, echo=FALSE}
+  # Setting up data and plotting
   positions = unique(activity_cleaned$Position)
   cols = c("Position", "WT", "Entropy", "WT_G", "WT_A", "WT_S", "WT_T",  "WT_V",  "WT_C",  "WT_L",  "WT_I", "WT_M", "WT_F", "WT_Y", "WT_W", "WT_R", "WT_E", "WT_D", "WT_Q", "WT_K", "WT_P", "WT_N", "WT_H", "max_JS", "BLOSUM", "Full_pos") 
   output_df = setNames(data.frame(matrix(ncol = 26, nrow = 1)), cols)
@@ -140,20 +144,13 @@ if a different value makes more sense.
         norm = mean(rowSums(act_pos_WT[,substrates]))
       }
 
-
       if (is.null(act_pos_norm)){
         act_pos_norm = act_pos_s[,substrates]/norm
-        #act_pos_norm['Total_activity'] = rowSums(act_pos_norm[,substrates])
         act_pos_norm['Residue'] = act_pos_s$Residue
-        #act_pos_norm = aggregate(act_pos_norm[, 1:12], list(act_pos_norm$Residue), mean)
-        #act_pos_norm["Total_activity"] = rowSums(act_pos_norm[,substrates])
       }
       else{
         act_pos_norm_tmp = act_pos_s[,substrates]/norm
-        #act_pos_norm_tmp['Total_activity'] = rowSums(act_pos_norm_tmp[,substrates])
         act_pos_norm_tmp['Residue'] = act_pos_s$Residue
-        #act_pos_norm_tmp = aggregate(act_pos_norm_tmp[, 1:12], list(act_pos_norm_tmp$Residue), mean)
-        #act_pos_norm_tmp["Total_activity"] = rowSums(act_pos_norm_tmp[,substrates])
         act_pos_norm = rbind(act_pos_norm, act_pos_norm_tmp)
       }
     }
@@ -170,9 +167,6 @@ if a different value makes more sense.
       combined_act_pos_norm = rbind(combined_act_pos_norm, act_pos_norm)
     }
     ent = entropy(act_pos_norm$Total_activity)
-    #if (pos=="664"){
-    #  print(act_pos_norm$Total_activity)
-    #}
     out = c(out, ent)
     title = paste(WT,pos, sep="")
     title = paste(title, ", Entropy=", sep="")
@@ -180,7 +174,6 @@ if a different value makes more sense.
     act_pos_norm_long$variable <- factor(act_pos_norm_long$variable, levels = HA)
     plot_tit = paste("./Plots/relative_activity_", pos,sep="")
     plot_tit = paste(plot_tit, ".svg",sep="")
-    #svg(file=plot_tit, width=5, height=3)
     ggp <- ggplot(act_pos_norm_long, aes(x=Residue, y=value, fill = variable))+geom_col() + scale_x_discrete(limits = residues_of_interest) + ggtitle(title) + theme_bw() + labs(x="Residue", y = "Relative activity") +
   scale_fill_manual(values=HA_colors) +
   theme(panel.grid.major = element_blank(), 
@@ -193,10 +186,8 @@ if a different value makes more sense.
         axis.text.x = element_text(color = "black", size = 9, angle = 45, hjust = 1, vjust = 1, face = "plain"),
         axis.text.y = element_text(color = "black", size = 9, angle = 0, hjust = 1, vjust = 0.5, face = "plain")   
         )
-#dev.off()
   ggsave(file=plot_tit, plot=ggp, width=5, height=3)
     print(ggp)
-    #}
     
     act_pos_norm_per_enzyme = subset(act_pos_norm, select=-Total_activity)
   
@@ -219,7 +210,6 @@ if a different value makes more sense.
     
     title = paste(WT,pos, sep="")
     title = paste(title, ", Max JSD=", sep="")
-    #if (pos!="664"){
     WT_hist = act_pos_norm_per_enzyme[act_pos_norm_per_enzyme$Residue==WT, substrates]
     max_JS = 0.0
     RI = ""
@@ -345,10 +335,9 @@ JSD for WTs from different plates.
   output_df$max_JS = as.numeric(output_df$max_JS)
   output_df$BLOSUM = as.numeric(output_df$BLOSUM)
   
-  #svg(file="./Plots/max_JSD_vs_Entropy_small.svg", width=2.6, height=1.8) 
   ggp3 = ggplot(output_df, aes(Entropy, max_JS, color=Shell)) + geom_point() + 
-    geom_text(label=output_df$Full_pos, nudge_x = 0.1, nudge_y = 0.05, size=3) + ylim(0.0, NA) +
-    theme_bw() + labs(x="Entropy", y="Maximal JSD") + geom_line(data=WT_95q_df, aes(x=Shell, y=WT_95q, colour="WT JSD 95% line", alpha=0.4), size=1, linetype="dashed") + scale_colour_manual(values=shell_colors) +
+  geom_text(label=output_df$Full_pos, nudge_x = 0.1, nudge_y = 0.05, size=3) + ylim(0.0, NA) +
+  theme_bw() + labs(x="Entropy", y="Maximal JSD") + geom_line(data=WT_95q_df, aes(x=Shell, y=WT_95q, colour="WT JSD 95% line", alpha=0.4), size=1, linetype="dashed") + scale_colour_manual(values=shell_colors) +
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.border = element_blank(),
@@ -359,7 +348,7 @@ JSD for WTs from different plates.
         axis.text.x = element_text(color = "black", size = 9, angle = 0, hjust = 1, vjust = 1, face = "plain"),
         axis.text.y = element_text(color = "black", size = 9, angle = 0, hjust = 1, vjust = 0.5, face = "plain")   
         )
-  #dev.off() 
+  
   ggsave(file="./Plots/max_JSD_vs_Entropy_small.svg", plot=ggp3, width=2.6, height=1.8)
   print(ggp3)
 ```
